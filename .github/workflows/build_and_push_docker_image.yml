@@ -1,6 +1,9 @@
-name: Bump version in git
+name: Bump version, build and push image to registry
 
 on:
+  pull_request:
+    branches:
+    - main
   push:
     branches: 
     - main
