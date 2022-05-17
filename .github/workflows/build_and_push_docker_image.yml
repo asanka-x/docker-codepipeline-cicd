@@ -1,0 +1,35 @@
+name: Bump version in git
+
+on:
+  push:
+    branches: 
+    - main
+jobs:
+  build-and-deploy:    
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Bump version
+      run: |
+        git config --global user.email "github+actions@gmail.com"
+        git config --global user.name "Actions"
+        git fetch --tags
+        wget -O - https://raw.githubusercontent.com/treeder/bump/master/gitbump.sh | bash
+        echo "VERSION=$(git tag --sort=-v:refname --list "v[0-9]*" | head -n 1 | cut -c 2-)" >> $GITHUB_ENV
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: 206166443071.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REPOSITORY: nginx
+        IMAGE_TAG: $VERSION
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
